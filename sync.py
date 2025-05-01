@@ -12,10 +12,10 @@ scopes = [
 ]
 
 # Load service account file from environment variable (for Render)
-SERVICE_ACCOUNT_PATH = os.getenv("GCP_SERVICE_ACCOUNT_JSON", "service_account.json")
+SERVICE_ACCOUNT_PATH = os.getenv("GCP_SERVICE_ACCOUNT_JSON")
 
 with open(SERVICE_ACCOUNT_PATH) as f:
-    service_account_info = json.load(f)
+    service_account_info = json.loads(f)
 
 credentials = Credentials.from_service_account_info(service_account_info, scopes=scopes)
 client = gspread.authorize(credentials)
@@ -23,7 +23,7 @@ spreadsheet = client.open("Lead_Data")
 sheet = spreadsheet.sheet1
 
 # ---------- MongoDB Setup ----------
-MONGO_URI = os.getenv("MONGO_URI", "your-fallback-mongo-uri")  # Replace with fallback dev URI if needed
+MONGO_URI = os.getenv("MONGO_URI")  # Replace with fallback dev URI if needed
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client["ChatbotDB"]
 collection = db["lead_data"]
