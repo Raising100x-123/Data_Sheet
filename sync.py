@@ -1,24 +1,28 @@
 import gspread
-import os
 import json
-from google.oauth2.service_account import Credentials
 from pymongo import MongoClient
+from pymongo.errors import PyMongoError
+from google.oauth2.service_account import Credentials
 
-MONGO_URI = os.getenv("MONGO_URI")
-mongo_client = MongoClient(MONGO_URI)
-db = mongo_client["ChatbotDB"]
-collection = db["lead_data"]
-
+# ---------- Google Sheets Setup ----------
 scopes = [
     'https://www.googleapis.com/auth/spreadsheets',
     'https://www.googleapis.com/auth/drive'
 ]
 
-service_account_info = json.loads(os.environ['GCP_SERVICE_ACCOUNT_JSON'])
+with open("C:/Users/CMI10/Desktop/raising100x/Data_new/raising100x-458210-91b255678e66.json") as f:
+    service_account_info = json.load(f)
+
 credentials = Credentials.from_service_account_info(service_account_info, scopes=scopes)
 client = gspread.authorize(credentials)
 spreadsheet = client.open("Lead_Data")
 sheet = spreadsheet.sheet1
+
+# ---------- MongoDB Setup ----------
+MONGO_URI = "mongodb+srv://Ashwanth:qOQZJWXjbi0IFykD@atlascluster.wub5i.mongodb.net/?retryWrites=true&w=majority&appName=AtlasCluster"
+mongo_client = MongoClient(MONGO_URI)
+db = mongo_client["ChatbotDB"]
+collection = db["lead_data"]
 
 def find_row_by_session_id(session_id):
     records = sheet.get_all_records()
@@ -53,7 +57,7 @@ def upsert_google_sheet(doc):
     ]
 
     row_number = find_row_by_session_id(session_id)
-    
+
     if row_number:
         sheet.update(f'A{row_number}:I{row_number}', [row_data])
         print(f"✅ Updated session_id {session_id} at row {row_number}")
@@ -61,6 +65,18 @@ def upsert_google_sheet(doc):
         sheet.append_row(row_data)
         print(f"🆕 Inserted new session_id {session_id}")
 
-def sync_all_leads():
-    for doc in collection.find():
-        upsert_google_sheet(doc)
+# ---------- Watch MongoDB for Real-Time Changes ----------
+if __name__ == "__main__":
+    print("🚀 Listening for real-time updates from MongoDB...")
+
+    try:
+        with collection.watch() as stream:
+            for change in stream:
+                if change["operationType"] in ("insert", "update", "replace"):
+                    document_id = change["documentKey"]["_id"]
+                    updated_doc = collection.find_one({"_id": document_id})
+                    if updated_doc:
+                        upsert_google_sheet(updated_doc)
+
+    except PyMongoError as e:
+        print(f"❌ MongoDB error: {e}")
