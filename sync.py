@@ -1,5 +1,6 @@
 import gspread
 import json
+import os
 from pymongo import MongoClient
 from pymongo.errors import PyMongoError
 from google.oauth2.service_account import Credentials
@@ -10,8 +11,11 @@ scopes = [
     'https://www.googleapis.com/auth/drive'
 ]
 
-with open("C:/Users/CMI10/Desktop/raising100x/Data_new/raising100x-458210-91b255678e66.json") as f:
-    service_account_info = json.load(f)
+# Load Google credentials from environment variable
+try:
+    service_account_info = json.loads(os.environ["GCP_SERVICE_ACCOUNT_JSON"])
+except KeyError:
+    raise RuntimeError("❌ GOOGLE_CREDENTIALS environment variable not set.")
 
 credentials = Credentials.from_service_account_info(service_account_info, scopes=scopes)
 client = gspread.authorize(credentials)
@@ -19,7 +23,11 @@ spreadsheet = client.open("Lead_Data")
 sheet = spreadsheet.sheet1
 
 # ---------- MongoDB Setup ----------
-MONGO_URI = "mongodb+srv://Ashwanth:qOQZJWXjbi0IFykD@atlascluster.wub5i.mongodb.net/?retryWrites=true&w=majority&appName=AtlasCluster"
+try:
+    MONGO_URI = os.environ["MONGODB_URI"]
+except KeyError:
+    raise RuntimeError("❌ MONGODB_URI environment variable not set.")
+
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client["ChatbotDB"]
 collection = db["lead_data"]
