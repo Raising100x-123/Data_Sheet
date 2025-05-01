@@ -1,13 +1,11 @@
-from fastapi import FastAPI
 from sync import sync_all_leads
+
+# Example FastAPI usage
+from fastapi import FastAPI
 
 app = FastAPI()
 
-@app.get("/")
-def home():
-    return {"status": "running"}
-
-@app.post("/sync")
-def sync_data():
+@app.get("/sync-now")
+def trigger_sync():
     sync_all_leads()
-    return {"status": "Synced"}
+    return {"message": "Manual sync complete."}
