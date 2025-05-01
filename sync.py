@@ -1,16 +1,14 @@
+import gspread
 import os
 import json
-import gspread
 from google.oauth2.service_account import Credentials
 from pymongo import MongoClient
 
-# MongoDB Setup
 MONGO_URI = os.getenv("MONGO_URI")
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client["ChatbotDB"]
 collection = db["lead_data"]
 
-# Google Sheet Setup
 scopes = [
     'https://www.googleapis.com/auth/spreadsheets',
     'https://www.googleapis.com/auth/drive'
@@ -24,7 +22,7 @@ sheet = spreadsheet.sheet1
 
 def find_row_by_session_id(session_id):
     records = sheet.get_all_records()
-    for idx, record in enumerate(records, start=2):  # skip header
+    for idx, record in enumerate(records, start=2):
         if record.get('session_id') == session_id:
             return idx
     return None
@@ -61,9 +59,8 @@ def upsert_google_sheet(doc):
         print(f"✅ Updated session_id {session_id} at row {row_number}")
     else:
         sheet.append_row(row_data)
-        print(f"✅ Inserted new session_id {session_id}")
+        print(f"🆕 Inserted new session_id {session_id}")
 
 def sync_all_leads():
-    all_docs = collection.find()
-    for doc in all_docs:
+    for doc in collection.find():
         upsert_google_sheet(doc)
