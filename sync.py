@@ -11,9 +11,12 @@ scopes = [
     'https://www.googleapis.com/auth/drive'
 ]
 
-# Load service account JSON from environment variable (Render-style)
-service_account_json = os.getenv("GCP_SERVICE_ACCOUNT_JSON")
-service_account_info = json.loads(service_account_json)
+service_account_path = os.getenv("GCP_SERVICE_ACCOUNT_JSON")
+if service_account_path is None:
+    raise ValueError("GCP_SERVICE_ACCOUNT_JSON is not set.")
+
+with open(service_account_path, "r") as f:
+    service_account_info = json.load(f)
 
 credentials = Credentials.from_service_account_info(service_account_info, scopes=scopes)
 client = gspread.authorize(credentials)
@@ -21,7 +24,8 @@ spreadsheet = client.open("Lead_Data")
 sheet = spreadsheet.sheet1
 
 # ---------- MongoDB Setup ----------
-MONGO_URI = os.getenv("MONGO_URI")  # Replace with fallback dev URI if needed
+#MONGO_URI =  "mongodb+srv://Ashwanth:qOQZJWXjbi0IFykD@atlascluster.wub5i.mongodb.net/?retryWrites=true&w=majority&appName=AtlasCluster" # Replace with fallback dev URI if needed
+MONGO_URI = os.getenv("MONGO_URI")
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client["ChatbotDB"]
 collection = db["lead_data"]
