@@ -11,11 +11,9 @@ scopes = [
     'https://www.googleapis.com/auth/drive'
 ]
 
-# Load service account file from environment variable (for Render)
-SERVICE_ACCOUNT_PATH = os.getenv("GCP_SERVICE_ACCOUNT_JSON")
-
-with open(SERVICE_ACCOUNT_PATH) as f:
-    service_account_info = json.loads(f)
+# Load service account JSON from environment variable (Render-style)
+service_account_json = os.getenv("GCP_SERVICE_ACCOUNT_JSON")
+service_account_info = json.loads(service_account_json)
 
 credentials = Credentials.from_service_account_info(service_account_info, scopes=scopes)
 client = gspread.authorize(credentials)
