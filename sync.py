@@ -1,6 +1,7 @@
 import os
 import gspread
 import json
+import time
 from pymongo import MongoClient
 from pymongo.errors import PyMongoError
 from google.oauth2.service_account import Credentials
@@ -12,27 +13,26 @@ scopes = [
 ]
 
 service_account_path = os.getenv("GCP_SERVICE_ACCOUNT_JSON")
-if service_account_path is None:
-    raise ValueError("GCP_SERVICE_ACCOUNT_JSON is not set.")
+if not service_account_path:
+    raise ValueError("❌ GCP_SERVICE_ACCOUNT_JSON environment variable not set.")
 
-with open(service_account_path, "r") as f:
-    credentials = gspread.service_account.Credentials.from_service_account_info(json.load(f))
-
-credentials = Credentials.from_service_account_info(service_account_info, scopes=scopes)
-client = gspread.authorize(credentials) 
+credentials = Credentials.from_service_account_file(service_account_path, scopes=scopes)
+client = gspread.authorize(credentials)
 spreadsheet = client.open("Lead_Data")
 sheet = spreadsheet.sheet1
 
 # ---------- MongoDB Setup ----------
-#MONGO_URI =  "mongodb+srv://Ashwanth:qOQZJWXjbi0IFykD@atlascluster.wub5i.mongodb.net/?retryWrites=true&w=majority&appName=AtlasCluster" # Replace with fallback dev URI if needed
 MONGO_URI = os.getenv("MONGO_URI")
+if not MONGO_URI:
+    raise ValueError("❌ MONGO_URI environment variable not set.")
+
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client["ChatbotDB"]
 collection = db["lead_data"]
 
 def find_row_by_session_id(session_id):
     records = sheet.get_all_records()
-    for idx, record in enumerate(records, start=2):
+    for idx, record in enumerate(records, start=2):  # +2 accounts for header row
         if record.get('session_id') == session_id:
             return idx
     return None
@@ -71,19 +71,18 @@ def upsert_google_sheet(doc):
         sheet.append_row(row_data)
         print(f"🆕 Inserted new session_id {session_id}")
 
-# ---------- Function for Manual Sync ----------
 def sync_all_leads():
     print("🔄 Starting full sync of all MongoDB documents...")
     for doc in collection.find():
         upsert_google_sheet(doc)
     print("✅ Full sync complete.")
 
-# ---------- Watch MongoDB for Real-Time Changes ----------
+# ---------- Main Execution ----------
 if __name__ == "__main__":
     print("🚀 Listening for real-time updates from MongoDB...")
 
     try:
-        sync_all_leads()  # Initial sync on start
+        sync_all_leads()
         with collection.watch() as stream:
             for change in stream:
                 if change["operationType"] in ("insert", "update", "replace"):
@@ -93,3 +92,4 @@ if __name__ == "__main__":
                         upsert_google_sheet(updated_doc)
     except PyMongoError as e:
         print(f"❌ MongoDB error: {e}")
+        time.sleep(5)  # Prevent crash loop
