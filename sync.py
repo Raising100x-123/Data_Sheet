@@ -16,10 +16,10 @@ if service_account_path is None:
     raise ValueError("GCP_SERVICE_ACCOUNT_JSON is not set.")
 
 with open(service_account_path, "r") as f:
-    service_account_info = json.load(f)
+    credentials = gspread.service_account.Credentials.from_service_account_info(json.load(f))
 
 credentials = Credentials.from_service_account_info(service_account_info, scopes=scopes)
-client = gspread.authorize(credentials)
+client = gspread.authorize(credentials) 
 spreadsheet = client.open("Lead_Data")
 sheet = spreadsheet.sheet1
 
