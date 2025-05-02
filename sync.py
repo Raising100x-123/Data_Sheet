@@ -16,11 +16,14 @@ scopes = [
     'https://www.googleapis.com/auth/drive'
 ]
 
-service_account_path = os.getenv("GCP_SERVICE_ACCOUNT_JSON")
-if not service_account_path or not os.path.exists(service_account_path):
-    raise ValueError("❌ GCP_SERVICE_ACCOUNT_JSON environment variable not set or file not found.")
+service_account_json = os.getenv("GCP_SERVICE_ACCOUNT_JSON")
+if not service_account_json:
+    raise ValueError("❌ GCP_SERVICE_ACCOUNT_JSON environment variable not set.")
 
-credentials = Credentials.from_service_account_file(service_account_path, scopes=scopes)
+# Convert the JSON string into a dictionary
+service_account_info = json.loads(service_account_json)
+
+credentials = Credentials.from_service_account_info(service_account_info, scopes=scopes)
 client = gspread.authorize(credentials)
 spreadsheet = client.open("Lead_Data")
 sheet = spreadsheet.sheet1
