@@ -5,6 +5,10 @@ import time
 from pymongo import MongoClient
 from pymongo.errors import PyMongoError
 from google.oauth2.service_account import Credentials
+from dotenv import load_dotenv
+
+# ---------- Load .env ----------
+load_dotenv()
 
 # ---------- Google Sheets Setup ----------
 scopes = [
@@ -13,8 +17,8 @@ scopes = [
 ]
 
 service_account_path = os.getenv("GCP_SERVICE_ACCOUNT_JSON")
-if not service_account_path:
-    raise ValueError("❌ GCP_SERVICE_ACCOUNT_JSON environment variable not set.")
+if not service_account_path or not os.path.exists(service_account_path):
+    raise ValueError("❌ GCP_SERVICE_ACCOUNT_JSON environment variable not set or file not found.")
 
 credentials = Credentials.from_service_account_file(service_account_path, scopes=scopes)
 client = gspread.authorize(credentials)
@@ -30,9 +34,10 @@ mongo_client = MongoClient(MONGO_URI)
 db = mongo_client["ChatbotDB"]
 collection = db["lead_data"]
 
+# ---------- Helper Functions ----------
 def find_row_by_session_id(session_id):
     records = sheet.get_all_records()
-    for idx, record in enumerate(records, start=2):  # +2 accounts for header row
+    for idx, record in enumerate(records, start=2):  # 1-indexed + header
         if record.get('session_id') == session_id:
             return idx
     return None
@@ -92,4 +97,6 @@ if __name__ == "__main__":
                         upsert_google_sheet(updated_doc)
     except PyMongoError as e:
         print(f"❌ MongoDB error: {e}")
-        time.sleep(5)  # Prevent crash loop
+        time.sleep(5)
+    except Exception as ex:
+        print(f"❌ Unexpected error: {ex}")
